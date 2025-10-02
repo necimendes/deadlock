@@ -1,52 +1,59 @@
 import threading
 import time
 
-# definir os recursos compartilhados (locks)
+# definir recursos compartilhados (locks/semáforos)
 lock_A = threading.Lock()
 lock_B = threading.Lock()
 
+# ordem de aquisição de recursos definida: sempre lock a, depois lock b.
+
 def thread_1_funcao():
+    """mantém a ordem: lock a, depois lock b."""
     print("Thread 1: Tentando adquirir Lock A...")
     lock_A.acquire()  # t1 pega lock a
-    print("Thread 1: Lock A adquirido! (Possuindo Lock A)")
-    time.sleep(0.1) # pausa pra tread 2 comecar e pegar lock b
+    print("Thread 1: Lock A adquirido!")
+    time.sleep(0.1) # pausa para simular processamento/disputa
 
     print("Thread 1: Tentando adquirir Lock B...")
-    # t1 trava, espera q t2 libere lock b
+    # se t2 já tiver lock b, t1 espera. mas t2 também tentará a primeiro.
     lock_B.acquire() 
-    print("Thread 1: Lock B adquirido! (Deadlock evitado, mas não neste caso)")
+    print("Thread 1: Lock B adquirido!")
     
-    # simulação da conclusão do trabalho (nunca alcançado no deadlock)
+    print("Thread 1: Recursos adquiridos. Trabalhando...")
+    time.sleep(0.5)
+    
     lock_B.release()
     lock_A.release()
-    print("Thread 1: Terminou.")
+    print("Thread 1: Terminou e liberou os recursos.")
 
-def thread_2_funcao():
-    """tenta pegar lock b, depois lock a."""
-    print("Thread 2: Tentando adquirir Lock B...")
-    lock_B.acquire()  # t2 pega lock b
-    print("Thread 2: Lock B adquirido! (Possuindo Lock B)")
-    time.sleep(0.1) # pausa pra thread 1 pegar lock a
-
+def thread_2_funcao_corrigida():
+    """tenta adquirir lock a, depois lock b. (quebrando espera circular)"""
     print("Thread 2: Tentando adquirir Lock A...")
-    # t2 trava, esperando q t1 libere lock a
-    lock_A.acquire() 
-    print("Thread 2: Lock A adquirido! (Deadlock evitado, mas não neste caso)")
+    lock_A.acquire()  # t2 pega lock a (ou espera t1 liberá-lo)
+    print("Thread 2: Lock A adquirido!")
+    time.sleep(0.1) # pausa para simular processamento/disputa
+
+    print("Thread 2: Tentando adquirir Lock B...")
+    # t2 tenta pegar lock b (ou espera t1 liberá-lo)
+    lock_B.acquire() 
+    print("Thread 2: Lock B adquirido!")
     
-    # simulação da conclusão do trabalho (nunca alcançado no deadlock)
-    lock_A.release()
+    print("Thread 2: Recursos adquiridos. Trabalhando...")
+    time.sleep(0.5)
+    
     lock_B.release()
-    print("Thread 2: Terminou.")
+    lock_A.release()
+    print("Thread 2: Terminou e liberou os recursos.")
 
-# criar e iniciar as threads
+# criar e iniciar as threads (usando a função corrigida para t2)
 thread_1 = threading.Thread(target=thread_1_funcao)
-thread_2 = threading.Thread(target=thread_2_funcao)
+thread_2 = threading.Thread(target=thread_2_funcao_corrigida)
 
-print("--- Simulação de Deadlock Iniciada ---")
+print("--- Simulação de Prevenção de Deadlock Iniciada ---")
 thread_1.start()
 thread_2.start()
 
-# esperar que as threads terminem (o que não acontecerá em caso de deadlock)
+# esperar que as threads terminem
 thread_1.join()
 thread_2.join()
-print("--- Simulação de Deadlock Encerrada ---")
+print("--- Simulação de Deadlock Encerrada e bem sucedida ---")
